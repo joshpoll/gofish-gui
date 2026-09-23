@@ -1,0 +1,141 @@
+:root {
+  --pink: #f24abc;
+  --pink-fill: rgba(242, 74, 188, 0.28);
+  --border: #e3e5e8;
+  --muted: #6b7280;
+  --bg: #f7f8fa;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #1f2328;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body { background: var(--bg); }
+
+.app { display: grid; grid-template-rows: auto 1fr auto; height: 100%; }
+
+.app-header {
+  display: flex; gap: 12px; align-items: baseline;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); background: #fff;
+}
+.muted { color: var(--muted); font-size: 13px; }
+
+.panes { display: grid; grid-template-columns: minmax(320px, 1fr) minmax(0, 1.2fr); min-height: 0; }
+.pane { min-width: 0; min-height: 0; overflow: auto; }
+.code-pane {
+  border-right: 1px solid var(--border); background: #fff;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.canvas-pane { display: flex; align-items: center; justify-content: center; padding: 24px; }
+
+.code-editor { flex: 1; min-height: 0; border-top: 1px solid var(--border); }
+.code-editor .cm-editor { height: 100%; }
+.code-editor .cm-editor { font-size: 13px; }
+.code-editor .cm-editor.cm-focused { outline: none; }
+.cm-canvas-literal {
+  background: var(--pink-fill);
+  outline: 1px solid var(--pink);
+  border-radius: 2px;
+}
+
+/* Pipeline panel: one row per stage, text right-aligned left of a tile. */
+.pane-header {
+  padding: 8px 16px; font-size: 13px; font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+.pipeline {
+  flex: none; max-height: 50%; overflow: auto;
+  display: flex; flex-direction: column; padding: 8px 0;
+}
+.pipe-row {
+  display: grid; grid-template-columns: 260px 40px; gap: 12px;
+  align-items: center; padding: 8px 16px; width: 100%;
+  border: 0; background: none; font: inherit; color: inherit;
+  text-align: right; cursor: pointer;
+}
+.pipe-row:hover { background: var(--bg); }
+.pipe-row:focus-visible { outline: 1px solid var(--pink); outline-offset: -1px; }
+.pipe-text { display: flex; flex-direction: column; min-width: 0; }
+.pipe-title { font-size: 13px; display: flex; gap: 6px; justify-content: flex-end; align-items: baseline; }
+.pipe-name { font-weight: 500; }
+.pipe-key { font-weight: 500; }
+.pipe-key-label { color: var(--muted); font-weight: 400; }
+.pipe-detail {
+  font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pipe-tile {
+  position: relative; width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); border-radius: 6px; background: #fff; color: #4b5563;
+}
+.pipe-row:hover .pipe-tile { border-color: #c4c8ce; color: #1f2328; }
+/* Connector from the previous tile's bottom edge to this tile's top edge
+   (16px of row padding plus the 1px border). */
+.pipe-item + .pipe-item .pipe-tile::before {
+  content: ""; position: absolute; left: calc(50% - 0.5px); bottom: 100%;
+  width: 1px; height: 17px; background: var(--border);
+}
+.pipe-row.active .pipe-tile { border-color: var(--pink); color: var(--pink); background: rgba(242, 74, 188, 0.08); }
+.pipe-row.active .pipe-name, .pipe-row.active .pipe-key { color: var(--pink); }
+
+/* "+" on the connector above a stage: insert a flow operator there. Centred
+   on the seam between rows, over the tile column (16 + 260 + 12 + 40/2). */
+.pipe-item { position: relative; }
+.pipe-insert {
+  position: absolute; top: 0; left: 308px; z-index: 1;
+  transform: translate(-50%, -50%);
+}
+.pipe-plus {
+  display: flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; padding: 0; border-radius: 50%;
+  border: 1px solid #d5d8dc; background: #fff; color: #9ca3af; cursor: pointer;
+}
+.pipe-plus:hover, .pipe-insert.open .pipe-plus, .pipe-plus:focus-visible {
+  border-color: var(--pink); color: var(--pink); outline: none;
+}
+.pipe-picker {
+  position: absolute; top: 50%; right: calc(100% + 6px); transform: translateY(-50%);
+  display: flex; gap: 2px; padding: 3px;
+  background: #fff; border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.pipe-picker button {
+  border: 0; background: none; font: inherit; font-size: 12px; line-height: 1; color: inherit;
+  padding: 4px 8px; border-radius: 4px; cursor: pointer;
+}
+.pipe-picker button:hover, .pipe-picker button:focus-visible {
+  background: rgba(242, 74, 188, 0.08); color: var(--pink); outline: none;
+}
+
+.status {
+  padding: 6px 16px; font-size: 12px; color: var(--muted);
+  border-top: 1px solid var(--border); background: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.status.error { color: #b42318; background: #fef3f2; }
+
+/* Chart + overlay. The mount is gofish's; the handle layer sits on top. */
+.chart { position: relative; background: #fff; border: 1px solid var(--border); border-radius: 6px; }
+.chart-mount svg { display: block; }
+.handles-layer { position: absolute; inset: 0; touch-action: none; user-select: none; }
+
+.gap { position: absolute; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.gap-fill { position: absolute; inset: 0; border-radius: 2px; background: transparent; }
+.gap.same-level .gap-fill { background: var(--pink-fill); }
+
+/* The slim Figma-style pill, shown only on the targeted gap. */
+.gap-pill {
+  width: 4px; height: 88%; border-radius: 999px;
+  background: var(--pink); opacity: 0; transition: opacity 0.08s ease;
+  flex: none;
+}
+.gap-y .gap-pill { width: 88%; height: 4px; }
+.gap.target .gap-pill { opacity: 1; }
+
+.badge {
+  position: fixed; z-index: 1000; pointer-events: none;
+  background: var(--pink); color: #fff; border-radius: 999px;
+  font: 700 12px/1 -apple-system, sans-serif; padding: 4px 9px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
