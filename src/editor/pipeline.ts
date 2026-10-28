@@ -8,7 +8,7 @@ import { findProperty, parseChartExpression, stringLiteral } from "./source";
  * everything else, and each node keeps the source range it came from.
  */
 
-export type PipelineKind = "chart" | "spread" | "stack" | "rect" | "mark" | "op";
+export type PipelineKind = "chart" | "spread" | "stack" | "rect" | "mark" | "ribbon" | "op";
 
 export type PipelineNode = {
   kind: PipelineKind;
@@ -117,6 +117,15 @@ export function derivePipeline(code: string): PipelineResult {
       for (const arg of m.call.arguments) push(stageNode(arg, code));
     } else if (m.name === "mark") {
       for (const arg of m.call.arguments) push(markNode(arg, code));
+    } else if (m.name === "layer" && isRibbonLayer(m.call)) {
+      // `.layer(ribbon({ along: "product", ... }))`: one row for the band layer.
+      const opts = (m.call.arguments[0] as CallExpression).arguments[0];
+      push({
+        kind: "ribbon",
+        name: "ribbon",
+        detail: opts ? compactOptions(opts, code) : "",
+        range: { start: m.nameStart, end: m.call.end },
+      });
     } else {
       push({
         kind: "op",
@@ -169,12 +178,21 @@ function markNode(arg: Expression | SpreadElement, code: string): PipelineNode {
     return { kind: "mark", name: shorten(code.slice(arg.start, arg.end)), detail: "", range };
   }
   const opts = arg.arguments[0];
+  // A rect's `fill` has its own control in the panel, so it is left out of
+  // the detail line (like a spread's `by`).
+  const isRect = name === "rect";
   return {
-    kind: name === "rect" ? "rect" : "mark",
+    kind: isRect ? "rect" : "mark",
     name,
-    detail: opts ? compactOptions(opts, code) : "",
+    detail: opts ? compactOptions(opts, code, isRect ? ["fill"] : []) : "",
     range,
   };
+}
+
+/** `.layer(ribbon(...))` with exactly that one argument. */
+function isRibbonLayer(call: CallExpression): boolean {
+  const [arg, ...rest] = call.arguments;
+  return rest.length === 0 && !!arg && arg.type === "CallExpression" && calleeName(arg) === "ribbon";
 }
 
 function calleeName(call: CallExpression): string | undefined {

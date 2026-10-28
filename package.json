@@ -11,9 +11,10 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "node scripts/test-insert.mjs"
+    "test": "node scripts/test-insert.mjs && node scripts/test-props.mjs && node scripts/test-ribbon.mjs"
   },
   "dependencies": {
+    "@codemirror/commands": "^6.11.1",
     "@codemirror/lang-javascript": "^6.2.2",
     "@codemirror/state": "^6.4.1",
     "@codemirror/view": "^6.34.1",

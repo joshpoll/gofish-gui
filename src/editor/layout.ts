@@ -98,6 +98,26 @@ export function computeGaps(dl: DisplayList, calls: SpreadCall[]): Gap[] {
   return gaps;
 }
 
+/** A data mark (a rect) in display-list px, with the rows it draws. */
+export type Leaf = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+  datum: unknown;
+};
+
+/**
+ * The data marks of the display list as boxes, in display-list order (so a
+ * later leaf is drawn on top). The canvas tools hit-test against these.
+ */
+export function dataLeaves(dl: DisplayList): Leaf[] {
+  return dl.items.filter(isDataLeaf).map((item) => {
+    const b = leafBox(item);
+    return { left: b.x0, top: b.y0, width: b.x1 - b.x0, height: b.y1 - b.y0, datum: item.datum };
+  });
+}
+
 function isDataLeaf(item: DisplayItem): boolean {
   return (
     item.role === "node" &&
@@ -127,7 +147,7 @@ function union(a: Box, b: Box): Box {
 }
 
 /** A leaf's datum is a row or an array of rows (all sharing group keys). */
-function firstRow(datum: unknown): Record<string, unknown> | undefined {
+export function firstRow(datum: unknown): Record<string, unknown> | undefined {
   const row = Array.isArray(datum) ? datum[0] : datum;
   return row && typeof row === "object"
     ? (row as Record<string, unknown>)

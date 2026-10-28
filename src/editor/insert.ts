@@ -8,12 +8,18 @@ import { unwindChain } from "./pipeline";
  * insertion is one undo step and everything else re-derives from the code.
  */
 
-/** The operator templates offered by the "+" picker. */
-export const FLOW_TEMPLATES = {
-  spread: 'spread({ dir: "x" })',
-  stack: 'stack({ dir: "y" })',
-} as const;
-export type FlowTemplate = keyof typeof FLOW_TEMPLATES;
+/** The operators offered by the "+" picker, with their default direction. */
+export const FLOW_OPS = { spread: "x", stack: "y" } as const;
+export type FlowOp = keyof typeof FLOW_OPS;
+
+/**
+ * Source text of a new operator call: `stack({ by: "product", dir: "y" })`,
+ * or `stack({ dir: "y" })` with no key.
+ */
+export function flowOpText(op: FlowOp, by?: string): string {
+  const key = by === undefined ? "" : `by: ${JSON.stringify(by)}, `;
+  return `${op}({ ${key}dir: "${FLOW_OPS[op]}" })`;
+}
 
 export type Insertion = {
   /** Replace [from, to) with `text` (from === to: a pure insertion). */
@@ -26,7 +32,7 @@ export type Insertion = {
 };
 
 /**
- * Insert `op` so that it becomes argument `flowIndex` of the first `.flow`
+ * Insert `op` (the operator call's source text, see flowOpText) so that it becomes argument `flowIndex` of the first `.flow`
  * call of `chart(...)...`. Formatting follows the existing list: one
  * argument per line (same indentation as the neighbour, trailing comma kept
  * if the list has one) or inline (`a, op`). With no `.flow` call, index 0
@@ -96,4 +102,36 @@ function at(pos: number, text: string, opOffset: number, op: string): Insertion 
 function indentOf(code: string, pos: number): string {
   const lineStart = code.lastIndexOf("\n", pos - 1) + 1;
   return /^[ \t]*/.exec(code.slice(lineStart))![0];
+}
+
+/**
+ * Append `.method` (source text without the dot, e.g.
+ * `layer(ribbon({ along: "product" }))`) at the end of the chart chain
+ * `chart(...)...`, after its last method call. The separator before the dot
+ * follows the chain's own style: the whitespace before the last method's dot
+ * (a line break and indent in the multi-line style, nothing inline), or a
+ * line break and two spaces when `chart(...)` has no methods yet. The
+ * selection covers `method`. Null when the code is not a chart chain.
+ */
+export function appendChainMethod(code: string, method: string): Insertion | null {
+  const parsed = parseChartExpression(code);
+  if (!parsed.ok) return null;
+  const { base, methods } = unwindChain(parsed.expr);
+  if (
+    base.type !== "CallExpression" ||
+    base.callee.type !== "Identifier" ||
+    base.callee.name !== "chart"
+  ) {
+    return null;
+  }
+  const last = methods[methods.length - 1];
+  let space = "\n  ";
+  if (last) {
+    // The text between the chained object and the method name holds the dot;
+    // keep only the whitespace in front of it (never a comment).
+    const object = last.call.callee.type === "MemberExpression" ? last.call.callee.object : base;
+    space = /^\s*/.exec(code.slice(object.end, last.nameStart))![0];
+  }
+  const prefix = `${space}.`;
+  return at(parsed.expr.end, `${prefix}${method}`, prefix.length, method);
 }

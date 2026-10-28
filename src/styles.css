@@ -26,7 +26,7 @@ body { background: var(--bg); }
   border-right: 1px solid var(--border); background: #fff;
   display: flex; flex-direction: column; overflow: hidden;
 }
-.canvas-pane { display: flex; align-items: center; justify-content: center; padding: 24px; }
+.canvas-pane { position: relative; display: flex; align-items: center; justify-content: center; padding: 24px 24px 24px 64px; }
 
 .code-editor { flex: 1; min-height: 0; border-top: 1px solid var(--border); }
 .code-editor .cm-editor { height: 100%; }
@@ -62,7 +62,7 @@ body { background: var(--bg); }
 .pipe-key-label { color: var(--muted); font-weight: 400; }
 .pipe-detail {
   font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--muted);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-height: 18px;
 }
 .pipe-tile {
   position: relative; width: 40px; height: 40px;
@@ -107,6 +107,44 @@ body { background: var(--bg); }
 .pipe-picker button:hover, .pipe-picker button:focus-visible {
   background: rgba(242, 74, 188, 0.08); color: var(--pink); outline: none;
 }
+/* Second step: the field to group by. Wraps so it stays inside the panel. */
+.pipe-picker { flex-wrap: wrap; justify-content: flex-end; align-items: center; width: max-content; max-width: 290px; }
+.pipe-picker-label { font-size: 12px; color: var(--muted); padding: 0 4px 0 2px; white-space: nowrap; }
+.pipe-picker .pipe-picker-back { color: var(--muted); padding: 4px 6px; }
+.pipe-picker .pipe-picker-nokey { color: var(--muted); font-style: italic; }
+
+/* The rect row's fill control, inline in the detail line. */
+.fill-control { display: inline-flex; align-items: center; gap: 3px; vertical-align: middle; }
+.fill-label { color: var(--muted); }
+.fill-mode { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.fill-mode button {
+  border: 0; background: #fff; font: inherit; font-size: 10px; line-height: 1;
+  padding: 2px 3px; color: #9ca3af; cursor: pointer;
+}
+.fill-mode button + button { border-left: 1px solid var(--border); }
+.fill-mode button:hover { color: #1f2328; }
+.fill-mode button.on { background: var(--bg); color: #1f2328; }
+.fill-mode button:focus-visible { outline: 1px solid var(--pink); outline-offset: -1px; }
+.fill-swatch { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.fill-swatch input[type="color"] {
+  -webkit-appearance: none; appearance: none;
+  width: 12px; height: 12px; padding: 0; border: 1px solid rgba(0, 0, 0, 0.2); border-radius: 3px;
+  background: none; cursor: pointer;
+}
+.fill-swatch input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.fill-swatch input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 2px; }
+.fill-swatch input[type="color"]::-moz-color-swatch { border: 0; border-radius: 2px; }
+.fill-swatch input[type="color"]:focus-visible { outline: 1px solid var(--pink); outline-offset: 1px; }
+.fill-value { color: #4b5563; }
+/* A chip sized to the chosen field, without the native arrow (the column
+   is narrow); it still opens the native list. */
+.fill-field {
+  -webkit-appearance: none; appearance: none; field-sizing: content;
+  font: inherit; color: #1f2328; background: #fff; cursor: pointer;
+  border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; height: 16px;
+}
+.fill-field:hover { border-color: #c4c8ce; }
+.fill-field:focus-visible { outline: 1px solid var(--pink); }
 
 .status {
   padding: 6px 16px; font-size: 12px; color: var(--muted);
@@ -139,3 +177,29 @@ body { background: var(--bg); }
   font: 700 12px/1 -apple-system, sans-serif; padding: 4px 9px;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
+
+/* The tool bank: a vertical toolbar at the canvas pane's left edge. */
+.tool-bank {
+  position: absolute; top: 16px; left: 12px; z-index: 2;
+  display: flex; flex-direction: column; gap: 2px; padding: 3px;
+  background: #fff; border: 1px solid var(--border); border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+.tool-bank button {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px; padding: 0; border: 0; border-radius: 5px;
+  background: none; color: #4b5563; cursor: pointer;
+}
+.tool-bank button:hover { background: var(--bg); color: #1f2328; }
+.tool-bank button.on { background: rgba(242, 74, 188, 0.12); color: var(--pink); }
+.tool-bank button:focus-visible { outline: 1px solid var(--pink); outline-offset: -1px; }
+
+/* Canvas tools other than Select: hover outline and drag preview. */
+.tool-layer { position: absolute; inset: 0; touch-action: none; user-select: none; }
+.leaf-outline {
+  position: absolute; pointer-events: none;
+  outline: 1.5px solid var(--pink); outline-offset: 1px; border-radius: 1px;
+}
+.tool-preview { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.tool-preview line { stroke: var(--pink); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.tool-preview circle { fill: var(--pink); }

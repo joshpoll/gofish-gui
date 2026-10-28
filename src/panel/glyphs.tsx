@@ -58,6 +58,11 @@ export function Glyph(props: { node: PipelineNode }) {
         <Match when={props.node.kind === "rect"}>
           <rect x={6} y={6} width={12} height={12} rx={1} fill="currentColor" />
         </Match>
+        <Match when={props.node.kind === "ribbon"}>
+          <rect x={3} y={5} width={4} height={14} />
+          <rect x={17} y={8} width={4} height={8} />
+          <path d="M7 5C12 5 12 8 17 8M7 19C12 19 12 16 17 16" />
+        </Match>
       </Switch>
     </Svg>
   );

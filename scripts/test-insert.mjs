@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { createServer } from "vite";
 
 const server = await createServer({ server: { middlewareMode: true }, appType: "custom", logLevel: "silent" });
-const { insertFlowOp } = await server.ssrLoadModule("/src/editor/insert.ts");
+const { insertFlowOp, flowOpText } = await server.ssrLoadModule("/src/editor/insert.ts");
 const { derivePipeline } = await server.ssrLoadModule("/src/editor/pipeline.ts");
 
 const OP = 'stack({ dir: "y" })';
@@ -68,12 +68,27 @@ check("out of range / not a chart", () => {
   assert.equal(insertFlowOp(`chart(`, 0, OP), null);
 });
 
+check("flowOpText: keyed and keyless templates", () => {
+  assert.equal(flowOpText("stack", "product"), 'stack({ by: "product", dir: "y" })');
+  assert.equal(flowOpText("spread", "product"), 'spread({ by: "product", dir: "x" })');
+  assert.equal(flowOpText("stack"), 'stack({ dir: "y" })');
+  assert.equal(flowOpText("spread"), 'spread({ dir: "x" })');
+});
+check("insert a keyed stack between the spreads", () => {
+  const op = flowOpText("stack", "product");
+  const ins = insertFlowOp(multi, 2, op);
+  const out = multi.slice(0, ins.from) + ins.text + multi.slice(ins.to);
+  assert.equal(out, wrap(R + Q + line(op)));
+  assert.equal(out.slice(ins.selectFrom, ins.selectTo), op);
+});
+
 check("pipeline insert indices", () => {
   const r = derivePipeline(multi);
   assert.ok(r.ok);
   assert.deepEqual(r.nodes.map((n) => [n.name, n.insertIndex]),
     [["chart", undefined], ["spread", 0], ["spread", 1], ["rect", 2]]);
   assert.equal(r.nodes[0].detail, "data · axes: true");
+  assert.equal(r.nodes[3].detail, "h: total", "rect detail leaves fill to its control");
   const r2 = derivePipeline(`chart(data).mark(rect({}))`);
   assert.deepEqual(r2.nodes.map((n) => [n.name, n.insertIndex]), [["chart", undefined], ["rect", 0]]);
 });

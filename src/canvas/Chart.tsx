@@ -1,6 +1,6 @@
 import { createEffect, type Accessor, type JSX } from "solid-js";
 import { RENDER_OPTIONS, type Evaluation } from "../editor/evaluate";
-import { computeGaps, type Gap } from "../editor/layout";
+import { computeGaps, dataLeaves, type Gap, type Leaf } from "../editor/layout";
 
 type Ok = Extract<Evaluation, { ok: true }>;
 
@@ -9,6 +9,8 @@ export type Rendered = {
   evaluation: Ok;
   /** Gap boxes in overlay (container) pixels. */
   gaps: Gap[];
+  /** Data marks (rects) in overlay pixels, for the canvas tools' hit tests. */
+  leaves: Leaf[];
   /** Screen pixels per display-list pixel (1 unless the SVG is scaled). */
   scale: number;
 };
@@ -66,14 +68,16 @@ export function Chart(props: {
     const scale = svgBox && dl.viewport.w > 0 ? svgBox.width / dl.viewport.w : 1;
     const dx = svgBox ? svgBox.left - box.left : 0;
     const dy = svgBox ? svgBox.top - box.top : 0;
-    const gaps = computeGaps(dl, ev.calls).map((g) => ({
-      ...g,
-      left: dx + g.left * scale,
-      top: dy + g.top * scale,
-      width: g.width * scale,
-      height: g.height * scale,
-    }));
-    return { evaluation: ev, gaps, scale };
+    const toOverlay = <B extends { left: number; top: number; width: number; height: number }>(b: B): B => ({
+      ...b,
+      left: dx + b.left * scale,
+      top: dy + b.top * scale,
+      width: b.width * scale,
+      height: b.height * scale,
+    });
+    const gaps = computeGaps(dl, ev.calls).map(toOverlay);
+    const leaves = dataLeaves(dl).map(toOverlay);
+    return { evaluation: ev, gaps, leaves, scale };
   }
 
   createEffect(() => {
